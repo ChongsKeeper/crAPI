@@ -26,6 +26,7 @@ from crapi.merchant.serializers import ContactMechanicSerializer
 from utils.jwt import jwt_auth_required
 from utils import messages
 from utils.logging import log_error
+from urllib.parse import urlparse
 
 logger = logging.getLogger()
 
@@ -69,13 +70,18 @@ class ContactMechanicView(APIView):
         repeat_count = 0
         while True:
             request_url=request_data['mechanic_api']
+            parsed_url = urlparse(request_url)
+            if parsed_url.scheme not in ['http', 'https'] or parsed_url.netloc in ['localhost', '127.0.0.1', '0.0.0.0']:
+                return Response(
+                    {'message': messages.INVALID_URL},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             logger.info(f"Repeat count: {repeat_count}, mechanic_api: {request_url}")
             try:
                 mechanic_response = requests.get(
                     request_url,
                     params=request_data,
                     headers={'Authorization': request.META.get('HTTP_AUTHORIZATION')},
-                    verify=False
                 )
                 if mechanic_response.status_code == status.HTTP_200_OK:
                     logger.info(f"Got a valid response at repeat count: {repeat_count}")
